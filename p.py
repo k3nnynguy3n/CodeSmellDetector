@@ -18,16 +18,25 @@ class CodeSmellApp:
 
     def create_widgets(self):
         self.frame = ttk.Frame(self.root, padding="10")
-        self.frame.grid(row=0, column=0, sticky=("nsew"))
+        self.frame.grid(row=0, column=0, sticky="nsew")
 
+        # Configure root and frame to expand
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.rowconfigure(1, weight=1)  
+
+        # Fixed-size Load button
         self.load_button = ttk.Button(self.frame, text="Load Python File", command=self.load_file)
-        self.load_button.grid(row=0, column=0, pady=10)
+        self.load_button.grid(row=0, column=0, pady=10, sticky="n")
 
-        self.results_text = tk.Text(self.frame, wrap="word", width=80, height=20)
-        self.results_text.grid(row=1, column=0, pady=10)
+        # Dynamic Text output
+        self.results_text = tk.Text(self.frame, wrap="word")
+        self.results_text.grid(row=1, column=0, sticky="nsew", pady=10)
 
+        # Fixed-size status label
         self.status_label = ttk.Label(self.frame, text="Status: Waiting for input")
-        self.status_label.grid(row=2, column=0, pady=10)
+        self.status_label.grid(row=2, column=0, pady=10, sticky="n")
 
     def load_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("Python Files", "*.py")])
@@ -52,5 +61,6 @@ class CodeSmellApp:
 
 if __name__ == "__main__":
     root = tk.Tk()
+    root.geometry("800x600")
     app = CodeSmellApp(root)
     root.mainloop()

@@ -10,6 +10,28 @@ class CodeSmellDetector:
         self.tree = ast.parse(code)
         self.issues = []
 
+    def run_all_checks(self):
+        self.issues.clear()
+        functions = [node for node in ast.walk(self.tree) if isinstance(node, ast.FunctionDef)]
+
+        for func in functions:
+            self.check_long_function(func)
+            self.check_many_parameters(func)
+
+        return self.issues
+
+    def check_long_function(self, node):
+        lines = [n.lineno for n in ast.walk(node) if hasattr(n, "lineno")]
+        if lines:
+            length = max(lines) - node.lineno
+            if length > 15:
+                self.issues.append((node.name, f"Long method/function: {length} lines"))
+
+    def check_many_parameters(self, node):
+        num_args = len(node.args.args)
+        if num_args > 5:
+            self.issues.append((node.name, f"Long parameters: {num_args}"))
+
 class CodeSmellApp:
     def __init__(self, root):
         self.root = root
@@ -20,21 +42,17 @@ class CodeSmellApp:
         self.frame = ttk.Frame(self.root, padding="10")
         self.frame.grid(row=0, column=0, sticky="nsew")
 
-        # Configure root and frame to expand
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         self.frame.columnconfigure(0, weight=1)
         self.frame.rowconfigure(1, weight=1)  
 
-        # Fixed-size Load button
         self.load_button = ttk.Button(self.frame, text="Load Python File", command=self.load_file)
         self.load_button.grid(row=0, column=0, pady=10, sticky="n")
 
-        # Dynamic Text output
         self.results_text = tk.Text(self.frame, wrap="word")
         self.results_text.grid(row=1, column=0, sticky="nsew", pady=10)
 
-        # Fixed-size status label
         self.status_label = ttk.Label(self.frame, text="Status: Waiting for input")
         self.status_label.grid(row=2, column=0, pady=10, sticky="n")
 

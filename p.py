@@ -2,43 +2,52 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import ast
 import threading
-import os
 
 class CodeSmellDetector:
     def __init__(self, code):
         self.code = code
+        self.codeLines = code.splitlines()
         self.tree = ast.parse(code)
         self.issues = []
 
-    def run_all_checks(self):
+    def runAllChecks(self):
         self.issues.clear()
         functions = [node for node in ast.walk(self.tree) if isinstance(node, ast.FunctionDef)]
 
         for func in functions:
-            self.check_long_function(func)
-            self.check_many_parameters(func)
+            self.checkLongFunction(func)
+            self.checkManyParameters(func)
 
         return self.issues
 
-    def check_long_function(self, node):
-        lines = [n.lineno for n in ast.walk(node) if hasattr(n, "lineno")]
-        if lines:
-            length = max(lines) - node.lineno
-            if length > 15:
-                self.issues.append((node.name, f"Long method/function: {length} lines"))
+    def checkLongFunction(self, node):
+        longMethodThreshold = 15
+        startLine = node.lineno - 1  
+        endLine = self.getEndLine(node)
 
-    def check_many_parameters(self, node):
-        num_args = len(node.args.args)
-        if num_args > 5:
-            self.issues.append((node.name, f"Long parameters: {num_args}"))
+        bodyLines = self.codeLines[startLine:endLine]
+        nonBlankLines = [line for line in bodyLines if line.strip() != '']
+
+        if len(nonBlankLines) > longMethodThreshold:
+            self.issues.append((node.name, f"Long method/function: {len(nonBlankLines)}"))
+
+    def getEndLine(self, node):
+        allLines = [n.lineno for n in ast.walk(node) if hasattr(n, "lineno")]
+        return max(allLines) if allLines else node.lineno
+
+    def checkManyParameters(self, node):
+        parameterLimit = 3
+        numArgs = len(node.args.args)
+        if numArgs > parameterLimit:
+            self.issues.append((node.name, f"Long parameters: {numArgs}"))
 
 class CodeSmellApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Code Smell Detector")
-        self.create_widgets()
+        self.createWidgets()
 
-    def create_widgets(self):
+    def createWidgets(self):
         self.frame = ttk.Frame(self.root, padding="10")
         self.frame.grid(row=0, column=0, sticky="nsew")
 
@@ -47,35 +56,35 @@ class CodeSmellApp:
         self.frame.columnconfigure(0, weight=1)
         self.frame.rowconfigure(1, weight=1)  
 
-        self.load_button = ttk.Button(self.frame, text="Load Python File", command=self.load_file)
-        self.load_button.grid(row=0, column=0, pady=10, sticky="n")
+        self.loadButton = ttk.Button(self.frame, text="Load Python File", command=self.loadFile)
+        self.loadButton.grid(row=0, column=0, pady=10, sticky="n")
 
-        self.results_text = tk.Text(self.frame, wrap="word")
-        self.results_text.grid(row=1, column=0, sticky="nsew", pady=10)
+        self.resultsText = tk.Text(self.frame, wrap="word")
+        self.resultsText.grid(row=1, column=0, sticky="nsew", pady=10)
 
-        self.status_label = ttk.Label(self.frame, text="Status: Waiting for input")
-        self.status_label.grid(row=2, column=0, pady=10, sticky="n")
+        self.statusLabel = ttk.Label(self.frame, text="Status: Waiting for input")
+        self.statusLabel.grid(row=2, column=0, pady=10, sticky="n")
 
-    def load_file(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Python Files", "*.py")])
-        if file_path:
-            with open(file_path, "r") as f:
+    def loadFile(self):
+        filePath = filedialog.askopenfilename(filetypes=[("Python Files", "*.py")])
+        if filePath:
+            with open(filePath, "r") as f:
                 code = f.read()
-            self.status_label.config(text="Analyzing file...")
-            threading.Thread(target=self.analyze_code, args=(code,)).start()
+            self.statusLabel.config(text="Analyzing file...")
+            threading.Thread(target=self.analyzeCode, args=(code,)).start()
 
-    def analyze_code(self, code):
+    def analyzeCode(self, code):
         detector = CodeSmellDetector(code)
-        issues = detector.run_all_checks()
+        issues = detector.runAllChecks()
 
-        self.results_text.delete("1.0", tk.END)
+        self.resultsText.delete("1.0", tk.END)
         if not issues:
-            self.results_text.insert(tk.END, "No significant code smells detected.")
+            self.resultsText.insert(tk.END, "No significant code smells detected.")
         else:
             for name, issue in issues:
-                self.results_text.insert(tk.END, f"Function '{name}': {issue}\n")
+                self.resultsText.insert(tk.END, f"Function '{name}': {issue}\n")
 
-        self.status_label.config(text="Analysis complete.")
+        self.statusLabel.config(text="Analysis complete.")
 
 if __name__ == "__main__":
     root = tk.Tk()

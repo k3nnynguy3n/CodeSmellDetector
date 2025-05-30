@@ -59,7 +59,7 @@ class CodeSmellApp:
         self.loadButton = ttk.Button(self.frame, text="Load Python File", command=self.loadFile)
         self.loadButton.grid(row=0, column=0, pady=10, sticky="n")
 
-        self.resultsText = tk.Text(self.frame, wrap="word")
+        self.resultsText = tk.Text(self.frame, wrap="word", state="disabled")
         self.resultsText.grid(row=1, column=0, sticky="nsew", pady=10)
 
         self.statusLabel = ttk.Label(self.frame, text="Status: Waiting for input")
@@ -77,13 +77,16 @@ class CodeSmellApp:
         detector = CodeSmellDetector(code)
         issues = detector.runAllChecks()
 
+        self.resultsText.config(state="normal")  
         self.resultsText.delete("1.0", tk.END)
+
         if not issues:
             self.resultsText.insert(tk.END, "No significant code smells detected.")
         else:
             for name, issue in issues:
                 self.resultsText.insert(tk.END, f"Function '{name}': {issue}\n")
 
+        self.resultsText.config(state="disabled")  
         self.statusLabel.config(text="Analysis complete.")
 
 if __name__ == "__main__":

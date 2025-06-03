@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import ast
 import threading
+import re
 
 class CodeSmellDetector:
     def __init__(self, code):
@@ -18,6 +19,8 @@ class CodeSmellDetector:
             self.checkLongFunction(func)
             self.checkManyParameters(func)
 
+        self.checkDuplicateMethods(functions)
+
         return self.issues
 
     def checkLongFunction(self, node):
@@ -29,7 +32,7 @@ class CodeSmellDetector:
         nonBlankLines = [line for line in bodyLines if line.strip() != '']
 
         if len(nonBlankLines) > longMethodThreshold:
-            self.issues.append((node.name, f"Long method/function: {len(nonBlankLines)}"))
+            self.issues.append((node.name, f"Long method/function: {len(nonBlankLines)} lines"))
 
     def getEndLine(self, node):
         allLines = [n.lineno for n in ast.walk(node) if hasattr(n, "lineno")]
@@ -39,7 +42,32 @@ class CodeSmellDetector:
         parameterLimit = 3
         numArgs = len(node.args.args)
         if numArgs > parameterLimit:
-            self.issues.append((node.name, f"Long parameters: {numArgs}"))
+            self.issues.append((node.name, f"Long parameters: {numArgs} parameters"))
+
+    def checkDuplicateMethods(self, functions):
+        func_tokens = []
+        for node in functions:
+            startLine = node.lineno - 1
+            endLine = self.getEndLine(node)
+            bodyLines = self.codeLines[startLine:endLine]
+            code_block = "\n".join(bodyLines)
+            tokens = re.findall(r"\w+", code_block)
+            token_set = set(tokens)
+            func_tokens.append((node.name, token_set))
+
+        threshold = 0.75
+        n = len(func_tokens)
+        for i in range(n):
+            name_i, tokens_i = func_tokens[i]
+            for j in range(i + 1, n):
+                name_j, tokens_j = func_tokens[j]
+                if not tokens_i and not tokens_j:
+                    continue 
+                intersection = tokens_i.intersection(tokens_j)
+                union = tokens_i.union(tokens_j)
+                similarity = len(intersection) / len(union) if union else 0
+                if similarity >= threshold:
+                    self.issues.append((f"{name_i} & {name_j}", f"Duplicate code detected (similarity: {similarity:.2f})"))
 
 class CodeSmellApp:
     def __init__(self, root):
@@ -84,7 +112,7 @@ class CodeSmellApp:
             self.resultsText.insert(tk.END, "No significant code smells detected.")
         else:
             for name, issue in issues:
-                self.resultsText.insert(tk.END, f"Function '{name}': {issue}\n")
+                self.resultsText.insert(tk.END, f"Function(s) '{name}': {issue}\n")
 
         self.resultsText.config(state="disabled")  
         self.statusLabel.config(text="Analysis complete.")

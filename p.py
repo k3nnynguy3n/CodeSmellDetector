@@ -50,7 +50,9 @@ class CodeSmellDetector:
             endLine = self.getEndLine(node)
             bodyLines = self.codeLines[startLine:endLine]
             code_block = "\n".join(bodyLines)
-            char_set = set(code_block)
+            # Exclude all whitespace characters before building the set
+            non_whitespace_chars = [c for c in code_block if not c.isspace()]
+            char_set = set(non_whitespace_chars)
             func_chars.append((node.name, char_set))
 
         threshold = 0.75

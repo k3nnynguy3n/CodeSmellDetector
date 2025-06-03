@@ -20,12 +20,11 @@ class CodeSmellDetector:
             self.checkManyParameters(func)
 
         self.checkDuplicateMethods(functions)
-
         return self.issues
 
     def checkLongFunction(self, node):
         longMethodThreshold = 15
-        startLine = node.lineno - 1  
+        startLine = node.lineno - 1
         endLine = self.getEndLine(node)
 
         bodyLines = self.codeLines[startLine:endLine]
@@ -45,29 +44,31 @@ class CodeSmellDetector:
             self.issues.append((node.name, f"Long parameters: {numArgs} parameters"))
 
     def checkDuplicateMethods(self, functions):
-        func_tokens = []
+        func_chars = []
         for node in functions:
             startLine = node.lineno - 1
             endLine = self.getEndLine(node)
             bodyLines = self.codeLines[startLine:endLine]
             code_block = "\n".join(bodyLines)
-            tokens = re.findall(r"\w+", code_block)
-            token_set = set(tokens)
-            func_tokens.append((node.name, token_set))
+            char_set = set(code_block)
+            func_chars.append((node.name, char_set))
 
         threshold = 0.75
-        n = len(func_tokens)
+        n = len(func_chars)
         for i in range(n):
-            name_i, tokens_i = func_tokens[i]
+            name_i, chars_i = func_chars[i]
             for j in range(i + 1, n):
-                name_j, tokens_j = func_tokens[j]
-                if not tokens_i and not tokens_j:
-                    continue 
-                intersection = tokens_i.intersection(tokens_j)
-                union = tokens_i.union(tokens_j)
+                name_j, chars_j = func_chars[j]
+                if not chars_i and not chars_j:
+                    continue
+                intersection = chars_i.intersection(chars_j)
+                union = chars_i.union(chars_j)
                 similarity = len(intersection) / len(union) if union else 0
                 if similarity >= threshold:
-                    self.issues.append((f"{name_i} & {name_j}", f"Duplicate code detected (similarity: {similarity:.2f})"))
+                    self.issues.append(
+                        (f"{name_i} & {name_j}",
+                         f"Duplicate code detected (character‐level similarity: {similarity:.2f})")
+                    )
 
 class CodeSmellApp:
     def __init__(self, root):
@@ -82,7 +83,7 @@ class CodeSmellApp:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         self.frame.columnconfigure(0, weight=1)
-        self.frame.rowconfigure(1, weight=1)  
+        self.frame.rowconfigure(1, weight=1)
 
         self.loadButton = ttk.Button(self.frame, text="Load Python File", command=self.loadFile)
         self.loadButton.grid(row=0, column=0, pady=10, sticky="n")
@@ -105,7 +106,7 @@ class CodeSmellApp:
         detector = CodeSmellDetector(code)
         issues = detector.runAllChecks()
 
-        self.resultsText.config(state="normal")  
+        self.resultsText.config(state="normal")
         self.resultsText.delete("1.0", tk.END)
 
         if not issues:
@@ -114,7 +115,7 @@ class CodeSmellApp:
             for name, issue in issues:
                 self.resultsText.insert(tk.END, f"Function(s) '{name}': {issue}\n")
 
-        self.resultsText.config(state="disabled")  
+        self.resultsText.config(state="disabled")
         self.statusLabel.config(text="Analysis complete.")
 
 if __name__ == "__main__":
